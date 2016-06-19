@@ -4,16 +4,18 @@ open Microsoft.FSharp.NativeInterop
 open FSharp.Data
 open CommonLib
 let buffer = Array.zeroCreate<char> 128
-let conversions : Map<string,bool*(unit->string)> = 
-    Map.ofList 
+let conversions : list<string*(bool*(unit->string))> = 
         [
             "%",(false,(fun() -> "&#37;"))
             "time_generated",(false,(fun() -> System.DateTime.Now.ToLongTimeString()))
         ]
-let dynamic(page:string) = 
+let dynamic vars (page:string) = 
     let t = if System.IO.File.Exists(page) then System.IO.File.ReadAllText(page) else sprintf "Could not find dynamic page %s<br>Generated at %%time_generated%%" page
     let d = ref false
-    Map.fold(fun (acc:string) key (redo,elem:unit->string) -> let key = "%"+key+"%" in if redo then acc.Replace(key,elem()) else let v = elem() in acc.Replace(key,v)) t conversions
+    Map.fold(fun (acc:string) key (redo,elem:unit->string) -> 
+        let key = "%"+key+"%"
+        if redo then acc.Replace(key,elem()) else let v = elem() in acc.Replace(key,v)
+    ) t vars
     //let p = HtmlDocument.Load(page)
     //for i in p.Descendants "dynamic" do
         //for j in i.InnerText().Split(' ') do 
@@ -35,14 +37,40 @@ let main argv =
     flush p
     while true do 
         let b = Array.zeroCreate MAX_PACKET_SIZE
-        let requestedpage = 
+        let requestedpage,vars = 
             let packet = read(p)
             let payload = packet.payload 
-            printfn "%A" payload
-            let p = System.Text.ASCIIEncoding.ASCII.GetString(payload)
-            let v = p.[..p.Length-2]
-            if v.EndsWith "/" then v+"index.html" else v
-
+            let m = 
+                conversions
+                @
+                [
+                    "payload_size",(false,(fun() -> payload.Length|>string))
+                ]
+            if packet.payloadverb = PayloadVerb.GotPost then
+                printfn  "POST"
+                let s = Array.findIndex(function |0uy -> true |_ -> false) payload
+                let path = payload.[..s-1]
+                let a = payload.[s+1..]
+                let rec getall acc i j =
+                    Array.tryFindIndex((=) 0uy) i
+                    |> function 
+                        |None -> List.rev acc
+                        |Some(s) -> let a,b = Array.splitAt s i in getall (a::acc) (b.[1..]) (j+s)
+                let a' = getall [] a 0 :> seq<_>
+                let e = a'.GetEnumerator()
+                System.Text.ASCIIEncoding.ASCII.GetString(path), m @ 
+                    [while e.MoveNext() do 
+                        yield 
+                            (System.Text.ASCIIEncoding.ASCII.GetString e.Current,
+                            (e.MoveNext()|>ignore;let v = e.Current in false,(fun () -> System.Text.ASCIIEncoding.ASCII.GetString v)))
+                    ]
+            else
+                //printfn "%A" payload
+                let p = System.Text.ASCIIEncoding.ASCII.GetString(payload)
+                let v = p.[..p.Length-2]
+                if v.EndsWith "/" then v+"index.html", m else v, m
+            |> fun (i,j) -> i,Map.ofList j
+        printfn "%A" vars
         printfn "%A" (System.IO.Path.GetFullPath("./pages"+requestedpage))//System.IO.File.Exists("./pages"+requestedpage))
         let verb, response = 
             if requestedpage = "/" then 
@@ -54,7 +82,7 @@ let main argv =
                 PayloadVerb.GotFile,System.IO.File.ReadAllBytes("./resource/favicon.ico") 
             elif requestedpage.StartsWith("/dynamic/") then 
                 PayloadVerb.GotPage,("."+requestedpage
-                |> dynamic
+                |> dynamic vars
                 |> System.Text.ASCIIEncoding.ASCII.GetBytes)
             elif requestedpage.StartsWith("/resource/") then 
                 if System.IO.File.Exists("."+requestedpage) then
