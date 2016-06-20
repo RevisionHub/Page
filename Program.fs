@@ -97,7 +97,7 @@ let main argv =
                 PayloadVerb.GotPage,(using(System.IO.File.OpenRead("./pages/"+requestedpage)) HtmlDocument.Load
                 |> string 
                 |> System.Text.ASCIIEncoding.ASCII.GetBytes)
-        let r = {payloadsize = response.Length;payloadverb = verb; payload = Array.append response [|0uy|]}
+        let r = {payloadsize = response.Length;payloadverb = verb; payload = response}
         write c.[Daemon.Backend] r
     0 // return an integer exit code
 
