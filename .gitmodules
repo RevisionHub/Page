@@ -1,0 +1,3 @@
+[submodule "bin/Debug/HTML"]
+	path = bin/Debug/HTML
+	url = git@github.com:RevisionHub/HTML.git
