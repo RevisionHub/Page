@@ -71,30 +71,30 @@ let main argv =
                 if v.EndsWith "/" then v+"index.html", m else v, m
             |> fun (i,j) -> i,Map.ofList j
         printfn "%A" vars
-        printfn "%A" (System.IO.Path.GetFullPath("./pages"+requestedpage))//System.IO.File.Exists("./pages"+requestedpage))
+        printfn "%A" (System.IO.Path.GetFullPath("./HTML/pages"+requestedpage))//System.IO.File.Exists("./pages"+requestedpage))
         let verb, response = 
             if requestedpage = "/" then 
-                PayloadVerb.GotPage,(using(System.IO.File.OpenRead("./pages/index.html")) HtmlDocument.Load 
+                PayloadVerb.GotPage,(using(System.IO.File.OpenRead("./HTML/pages/index.html")) HtmlDocument.Load 
                 |> string 
                 |> System.Text.ASCIIEncoding.ASCII.GetBytes)
             elif requestedpage = "/favicon.ico" then
                 printfn "ICON"
-                PayloadVerb.GotFile,System.IO.File.ReadAllBytes("./resource/favicon.ico") 
+                PayloadVerb.GotFile,System.IO.File.ReadAllBytes("./HTML/resource/favicon.ico") 
             elif requestedpage.StartsWith("/dynamic/") then 
-                PayloadVerb.GotPage,("."+requestedpage
+                PayloadVerb.GotPage,("./HTML"+requestedpage
                 |> dynamic vars
                 |> System.Text.ASCIIEncoding.ASCII.GetBytes)
             elif requestedpage.StartsWith("/resource/") then 
-                if System.IO.File.Exists("."+requestedpage) then
+                if System.IO.File.Exists("./HTML/"+requestedpage) then
                     PayloadVerb.GotFile,System.IO.File.ReadAllBytes("."+requestedpage) 
                 else 
                     PayloadVerb.Res404,[||]
-            elif not(System.IO.File.Exists("./pages/"+requestedpage)) then 
-                PayloadVerb.GotPage, (using(System.IO.File.OpenRead("./pages/404.html")) HtmlDocument.Load 
+            elif not(System.IO.File.Exists("./pages/HTML/"+requestedpage)) then 
+                PayloadVerb.GotPage, (using(System.IO.File.OpenRead("./HTML/pages/404.html")) HtmlDocument.Load 
                 |> string 
                 |> System.Text.ASCIIEncoding.ASCII.GetBytes)
             else 
-                PayloadVerb.GotPage,(using(System.IO.File.OpenRead("./pages/"+requestedpage)) HtmlDocument.Load
+                PayloadVerb.GotPage,(using(System.IO.File.OpenRead("./HTML/pages/"+requestedpage)) HtmlDocument.Load
                 |> string 
                 |> System.Text.ASCIIEncoding.ASCII.GetBytes)
         let r = {payloadsize = response.Length;payloadverb = verb; payload = response}
