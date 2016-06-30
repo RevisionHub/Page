@@ -40,6 +40,10 @@
       <Project>{D8117D21-7A0A-4E84-A4D7-5E3FA4680C55}</Project>
       <Name>CommonLib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Timetable\Timetable.fsproj">
+      <Project>{D440A2A3-DC5F-4FF5-9D96-7AAD5FD192B9}</Project>
+      <Name>Timetable</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
